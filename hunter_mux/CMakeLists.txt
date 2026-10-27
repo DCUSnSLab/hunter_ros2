@@ -1,19 +1,31 @@
 cmake_minimum_required(VERSION 3.8)
 project(hunter_mux)
 
+if(NOT CMAKE_CXX_STANDARD)
+  set(CMAKE_CXX_STANDARD 17)
+endif()
+
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
 find_package(ament_cmake REQUIRED)
+find_package(rclcpp REQUIRED)
+find_package(rclcpp_components REQUIRED)
+find_package(geometry_msgs REQUIRED)
+find_package(teleop_rover_msgs REQUIRED)
 
-# Install Python scripts
-install(PROGRAMS
-  scripts/mux_node.py
-  DESTINATION lib/${PROJECT_NAME}
-)
+add_library(mux_component SHARED src/mux_node.cpp)
+ament_target_dependencies(mux_component rclcpp rclcpp_components geometry_msgs teleop_rover_msgs)
+rclcpp_components_register_node(mux_component
+  PLUGIN "hunter_mux::MuxNode"
+  EXECUTABLE mux_node)
 
-# Install Launch and Config files
+install(TARGETS mux_component
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION bin)
+
 install(DIRECTORY
   launch
   config

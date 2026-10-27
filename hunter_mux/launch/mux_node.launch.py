@@ -18,7 +18,7 @@ def generate_launch_description():
 
     mux_node = Node(
         package='hunter_mux',
-        executable='mux_node.py',
+        executable='mux_node',
         name='mux_node',
         output='screen',
         parameters=[mux_params],
