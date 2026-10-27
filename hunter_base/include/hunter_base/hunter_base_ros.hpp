@@ -10,24 +10,20 @@
 #ifndef HUNTER_BASE_ROS_HPP
 #define HUNTER_BASE_ROS_HPP
 
-#include <atomic>
 #include <memory>
 
 #include <rclcpp/rclcpp.hpp>
 
+#include "hunter_base/hunter_messenger.hpp"
 #include "ugv_sdk/mobile_robot/hunter_robot.hpp"
 
 namespace westonrobot {
 class HunterBaseRos : public rclcpp::Node {
  public:
-  HunterBaseRos(std::string node_name);
-
-  bool Initialize();
-  void Run();
-  void Stop();
+  explicit HunterBaseRos(const rclcpp::NodeOptions &options);
 
  private:
-  
+
   std::string port_name_;
   std::string odom_frame_;
   std::string base_frame_;
@@ -39,15 +35,18 @@ class HunterBaseRos : public rclcpp::Node {
   bool simulated_robot_ = false;
   int sim_control_rate_ = 50;
   bool publish_tf_ = true;  // TF 발행 여부
-  
+
   int version=2;
   bool is_omni_ = false;
   std::shared_ptr<HunterRobot> robot_;
   // std::shared_ptr<HunterMiniOmniRobot> omni_robot_;
 
-  std::atomic<bool> keep_running_;
+  std::unique_ptr<HunterMessenger<HunterRobot>> messenger_;
+  rclcpp::TimerBase::SharedPtr timer_;
 
   void LoadParameters();
+  bool Initialize();
+  void SetupMessenger();
 };
 }  // namespace westonrobot
 

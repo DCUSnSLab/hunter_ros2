@@ -9,12 +9,15 @@
 
 #include "hunter_base/hunter_base_ros.hpp"
 
-#include "hunter_base/hunter_messenger.hpp"
+#include <stdexcept>
+
+#include <rclcpp_components/register_node_macro.hpp>
+
 #include "ugv_sdk/utilities/protocol_detector.hpp"
 
 namespace westonrobot {
-HunterBaseRos::HunterBaseRos(std::string node_name)
-    : rclcpp::Node(node_name), keep_running_(false) {
+HunterBaseRos::HunterBaseRos(const rclcpp::NodeOptions &options)
+    : rclcpp::Node("hunter", options) {
   this->declare_parameter("port_name", rclcpp::ParameterValue("can0"));   //声明参数
 
   this->declare_parameter("odom_frame", rclcpp::ParameterValue("odom"));
@@ -29,6 +32,8 @@ HunterBaseRos::HunterBaseRos(std::string node_name)
   this->declare_parameter("control_rate", rclcpp::ParameterValue(50));
 
   LoadParameters();
+  if (!Initialize()) throw std::runtime_error("hunter protocol detection failed");
+  SetupMessenger();
 }
 
 void HunterBaseRos::LoadParameters() {
@@ -84,64 +89,48 @@ bool HunterBaseRos::Initialize() {
   return true;
 }
 
-void HunterBaseRos::Stop() { keep_running_ = false; }
-
-void HunterBaseRos::Run() {
-
-  // instantiate a ROS messenger
-    std::unique_ptr<HunterMessenger<HunterRobot>> messenger =
-        std::unique_ptr<HunterMessenger<HunterRobot>>(
-            new HunterMessenger<HunterRobot>(robot_, this));
+void HunterBaseRos::SetupMessenger() {
+    messenger_ = std::unique_ptr<HunterMessenger<HunterRobot>>(
+        new HunterMessenger<HunterRobot>(robot_, this));
 
     if(version==1)
     {
-      messenger->SetTrack(HunterV1Params::track);
-      messenger->SetWeelbase(HunterV1Params::wheelbase);
-      messenger->SetMaxSteerAngleCentral(HunterV1Params::max_steer_angle_central);
-      messenger->SetMaxSteerAngle(HunterV1Params::max_steer_angle);
+      messenger_->SetTrack(HunterV1Params::track);
+      messenger_->SetWeelbase(HunterV1Params::wheelbase);
+      messenger_->SetMaxSteerAngleCentral(HunterV1Params::max_steer_angle_central);
+      messenger_->SetMaxSteerAngle(HunterV1Params::max_steer_angle);
 
     }
     else
     {
-      messenger->SetTrack(HunterV2Params::track);
-      messenger->SetWeelbase(HunterV2Params::wheelbase);
-      messenger->SetMaxSteerAngleCentral(HunterV2Params::max_steer_angle_central);
-      messenger->SetMaxSteerAngle(HunterV2Params::max_steer_angle);
+      messenger_->SetTrack(HunterV2Params::track);
+      messenger_->SetWeelbase(HunterV2Params::wheelbase);
+      messenger_->SetMaxSteerAngleCentral(HunterV2Params::max_steer_angle_central);
+      messenger_->SetMaxSteerAngle(HunterV2Params::max_steer_angle);
     
     }
     
-    messenger->SetOdometryFrame(odom_frame_);
-    messenger->SetBaseFrame(base_frame_);
-    messenger->SetOdometryTopicName(odom_topic_name_);
-    messenger->SetPublishTf(publish_tf_);  // TF 발행 여부 설정
-    if (simulated_robot_) messenger->SetSimulationMode(sim_control_rate_);
+    messenger_->SetOdometryFrame(odom_frame_);
+    messenger_->SetBaseFrame(base_frame_);
+    messenger_->SetOdometryTopicName(odom_topic_name_);
+    messenger_->SetPublishTf(publish_tf_);  // TF 발행 여부 설정
+    if (simulated_robot_) messenger_->SetSimulationMode(sim_control_rate_);
 
     // connect to robot and setup ROS subscription
-    if (port_name_.find("can") != std::string::npos) {
-      if (robot_->Connect(port_name_)) {
-        robot_->EnableCommandedMode();
-        // std::cout << "EnableCommandedMode" << std::endl;
-        std::cout << "Using CAN bus to talk with the robot" << std::endl;
-      } else {
-        std::cout << "Failed to connect to the robot CAN bus" << std::endl;
-        return;
-      }
-    } else {
-      std::cout << "Please check the specified port name is a CAN port"
-                << std::endl;
-      return;
+    if (port_name_.find("can") == std::string::npos) {
+      throw std::runtime_error("port_name is not a CAN port: " + port_name_);
     }
+    if (!robot_->Connect(port_name_)) {
+      throw std::runtime_error("failed to connect to CAN bus " + port_name_);
+    }
+    robot_->EnableCommandedMode();
+    std::cout << "Using CAN bus to talk with the robot" << std::endl;
 
     // publish robot state at 50Hz while listening to twist commands
-    messenger->SetupSubscription();
-    rclcpp::Rate rate(50);
-    keep_running_ = true;
-    while (keep_running_) {
-      messenger->PublishStateToROS();
-      // robot_->EnableCommandedMode();
-      rclcpp::spin_some(shared_from_this());
-      rate.sleep();
-    // }
-  }
+    messenger_->SetupSubscription();
+    timer_ = create_wall_timer(std::chrono::milliseconds(20),
+                               [this]() { messenger_->PublishStateToROS(); });
 }
 }  // namespace westonrobot
+
+RCLCPP_COMPONENTS_REGISTER_NODE(westonrobot::HunterBaseRos)
