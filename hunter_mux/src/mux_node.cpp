@@ -48,18 +48,18 @@ public:
         return result;
       });
 
-    final_cmd_pub_ = create_publisher<Twist>("/final_cmd", 10);
+    final_cmd_pub_ = create_publisher<Twist>("/final_cmd", 1);
     mux_status_pub_ = create_publisher<MuxStatus>("/vehicle/mux_status", 10);
     estop_status_pub_ = create_publisher<EStopStatus>("/vehicle/estop_status", 10);
 
     cmd_vel_sub_ = create_subscription<Twist>(
-      "/cmd_vel", 10, [this](Twist::ConstSharedPtr msg) {
+      "/cmd_vel", 1, [this](Twist::ConstSharedPtr msg) {
         last_nav_msg_ = *msg;
         last_nav_time_ = Clock::now();
         PublishIfSelected(SOURCE_NAV);
       });
     teleop_sub_ = create_subscription<Twist>(
-      "/remote/teleop_cmd", 10, [this](Twist::ConstSharedPtr msg) {
+      "/remote/teleop_cmd", 1, [this](Twist::ConstSharedPtr msg) {
         last_teleop_msg_ = *msg;
         last_teleop_time_ = Clock::now();
         PublishIfSelected(SOURCE_TELEOP);

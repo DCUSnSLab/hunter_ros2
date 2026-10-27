@@ -89,7 +89,7 @@ class HunterMessenger {
 
     // cmd subscriber
     motion_cmd_sub_ = node_->create_subscription<geometry_msgs::msg::Twist>(
-        "/final_cmd", 10,
+        "/final_cmd", 1,
         std::bind(&HunterMessenger::TwistCmdCallback, this,
                   std::placeholders::_1));
 
