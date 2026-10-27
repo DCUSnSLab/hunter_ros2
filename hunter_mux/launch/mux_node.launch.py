@@ -9,7 +9,7 @@ from launch_ros.actions import Node
 
 
 def generate_launch_description():
-    pkg_mux = get_package_share_directory('hunter_teleop_mux')
+    pkg_mux = get_package_share_directory('hunter_mux')
     mux_params = os.path.join(pkg_mux, 'config', 'mux_params.yaml')
 
     use_sim_arg = DeclareLaunchArgument(
@@ -17,7 +17,7 @@ def generate_launch_description():
         description='Use mock hunter base for simulation')
 
     mux_node = Node(
-        package='hunter_teleop_mux',
+        package='hunter_mux',
         executable='mux_node.py',
         name='mux_node',
         output='screen',
