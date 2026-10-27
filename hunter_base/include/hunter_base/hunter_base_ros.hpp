@@ -11,7 +11,6 @@
 #define HUNTER_BASE_ROS_HPP
 
 #include <memory>
-
 #include <rclcpp/rclcpp.hpp>
 
 #include "hunter_base/hunter_messenger.hpp"
@@ -23,7 +22,6 @@ class HunterBaseRos : public rclcpp::Node {
   explicit HunterBaseRos(const rclcpp::NodeOptions &options);
 
  private:
-
   std::string port_name_;
   std::string odom_frame_;
   std::string base_frame_;
@@ -34,9 +32,9 @@ class HunterBaseRos : public rclcpp::Node {
 
   bool simulated_robot_ = false;
   int sim_control_rate_ = 50;
-  bool publish_tf_ = true;  // TF 발행 여부
+  bool publish_tf_ = true;
 
-  int version=2;
+  int version = 2;
   bool is_omni_ = false;
   std::shared_ptr<HunterRobot> robot_;
   // std::shared_ptr<HunterMiniOmniRobot> omni_robot_;

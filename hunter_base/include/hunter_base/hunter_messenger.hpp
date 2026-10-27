@@ -10,33 +10,31 @@
 #ifndef HUNTER_MESSENGER_HPP
 #define HUNTER_MESSENGER_HPP
 
-#include <string>
-#include <mutex>
-#include <memory>
-
-#include <rclcpp/rclcpp.hpp>
-#include <nav_msgs/msg/odometry.hpp>
-#include <geometry_msgs/msg/twist.hpp>
 #include <tf2_ros/transform_broadcaster.h>
+
+#include <geometry_msgs/msg/twist.hpp>
+#include <memory>
+#include <mutex>
+#include <nav_msgs/msg/odometry.hpp>
+#include <rclcpp/rclcpp.hpp>
+#include <string>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
 #include "ascent/Ascent.h"
 #include "ascent/Utility.h"
 #include "hunter_base/bicycle_model.hpp"
 #include "hunter_base/hunter_params.hpp"
-
+#include "hunter_msgs/msg/hunter_light_cmd.hpp"
+#include "hunter_msgs/msg/hunter_status.hpp"
 #include "ugv_sdk/mobile_robot/hunter_robot.hpp"
 #include "ugv_sdk/utilities/protocol_detector.hpp"
-#include "hunter_msgs/msg/hunter_status.hpp"
-#include "hunter_msgs/msg/hunter_light_cmd.hpp"
 
 namespace westonrobot {
 
 template <typename SystemModel>
 class SystemPropagator {
  public:
-  asc::state_t Propagate(asc::state_t init_state,
-                         typename SystemModel::control_t u, double t0,
+  asc::state_t Propagate(asc::state_t init_state, typename SystemModel::control_t u, double t0,
                          double tf, double dt) {
     double t = t0;
     asc::state_t x = init_state;
@@ -61,19 +59,11 @@ class HunterMessenger {
   void SetOdometryFrame(std::string frame) { odom_frame_ = frame; }
   void SetBaseFrame(std::string frame) { base_frame_ = frame; }
   void SetOdometryTopicName(std::string name) { odom_topic_name_ = name; }
-  void SetPublishTf(bool publish) { publish_tf_ = publish; }  // TF 발행 여부 설정
-  void SetWeelbase(float Weelbase){
-    l = Weelbase;
-  }
-  void SetTrack(float Track){
-    w = Track;
-  }
-  void SetMaxSteerAngleCentral(float Angle){
-    max_steer_angle_central = Angle;
-  }
-  void SetMaxSteerAngle(float Angle){
-    max_steer_angle = Angle;
-  }
+  void SetPublishTf(bool publish) { publish_tf_ = publish; }
+  void SetWeelbase(float Weelbase) { l = Weelbase; }
+  void SetTrack(float Track) { w = Track; }
+  void SetMaxSteerAngleCentral(float Angle) { max_steer_angle_central = Angle; }
+  void SetMaxSteerAngle(float Angle) { max_steer_angle = Angle; }
   void SetSimulationMode(int loop_rate) {
     simulated_robot_ = true;
     sim_control_rate_ = loop_rate;
@@ -82,18 +72,13 @@ class HunterMessenger {
   void SetupSubscription() {
     // odometry publisher
     tf_broadcaster_ = std::make_shared<tf2_ros::TransformBroadcaster>(node_);
-    odom_pub_ =
-        node_->create_publisher<nav_msgs::msg::Odometry>(odom_topic_name_, 50);
-    status_pub_ = node_->create_publisher<hunter_msgs::msg::HunterStatus>(
-        "/hunter_status", 10);
+    odom_pub_ = node_->create_publisher<nav_msgs::msg::Odometry>(odom_topic_name_, 50);
+    status_pub_ = node_->create_publisher<hunter_msgs::msg::HunterStatus>("/hunter_status", 10);
 
     // cmd subscriber
     motion_cmd_sub_ = node_->create_subscription<geometry_msgs::msg::Twist>(
         "/final_cmd", 1,
-        std::bind(&HunterMessenger::TwistCmdCallback, this,
-                  std::placeholders::_1));
-
-    
+        std::bind(&HunterMessenger::TwistCmdCallback, this, std::placeholders::_1));
   }
 
   void PublishStateToROS() {
@@ -115,7 +100,7 @@ class HunterMessenger {
     status_msg.header.stamp = current_time_;
 
     status_msg.linear_velocity = state.motion_state.linear_velocity;
-    double phi =ConvertInnerAngleToCentral(state.motion_state.steering_angle);
+    double phi = ConvertInnerAngleToCentral(state.motion_state.steering_angle);
     status_msg.steering_angle = phi;
     // status_msg.angular_velocity = state.motion_state.steering_angle;
 
@@ -130,12 +115,9 @@ class HunterMessenger {
       // actuator_hs_state
       uint8_t motor_id = actuator.actuator_hs_state[i].motor_id;
 
-      status_msg.actuator_states[motor_id].rpm =
-          actuator.actuator_hs_state[i].rpm;
-      status_msg.actuator_states[motor_id].current =
-          actuator.actuator_hs_state[i].current;
-      status_msg.actuator_states[motor_id].pulse_count =
-          actuator.actuator_hs_state[i].pulse_count;
+      status_msg.actuator_states[motor_id].rpm = actuator.actuator_hs_state[i].rpm;
+      status_msg.actuator_states[motor_id].current = actuator.actuator_hs_state[i].current;
+      status_msg.actuator_states[motor_id].pulse_count = actuator.actuator_hs_state[i].pulse_count;
 
       // actuator_ls_state
       motor_id = actuator.actuator_ls_state[i].motor_id;
@@ -162,12 +144,11 @@ class HunterMessenger {
  private:
   std::shared_ptr<HunterType> hunter_;
   rclcpp::Node *node_;
-  
 
   std::string odom_frame_;
   std::string base_frame_;
   std::string odom_topic_name_;
-  bool publish_tf_ = true;  // TF 발행 여부
+  bool publish_tf_ = true;
 
   bool simulated_robot_ = false;
   int sim_control_rate_ = 50;
@@ -181,7 +162,6 @@ class HunterMessenger {
   rclcpp::Publisher<hunter_msgs::msg::HunterStatus>::SharedPtr status_pub_;
 
   rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr motion_cmd_sub_;
-  
 
   std::shared_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
 
@@ -200,7 +180,6 @@ class HunterMessenger {
   rclcpp::Time current_time_;
 
   void TwistCmdCallback(const geometry_msgs::msg::Twist::SharedPtr msg) {
-    
     if (!simulated_robot_) {
       SetHunterMotionCommand(msg);
     } else {
@@ -212,37 +191,31 @@ class HunterMessenger {
 
   // template <typename T,std::enable_if_t<!std::is_base_of<HunterRobot, T>::value,bool> = true>
   void SetHunterMotionCommand(const geometry_msgs::msg::Twist::SharedPtr &msg) {
-
     std::shared_ptr<HunterRobot> base;
 
     double radian = 0;
-    double phi_i = AngelVelocity2Angel(*msg,radian);
+    double phi_i = AngelVelocity2Angel(*msg, radian);
 
     std::cout << "set steering angle: " << phi_i << std::endl;
     hunter_->SetMotionCommand(msg->linear.x, phi_i);
     // hunter_
- 
   }
 
-  double ConvertCentralAngleToInner(double angle)
-  {
+  double ConvertCentralAngleToInner(double angle) {
     double phi = angle;
     double phi_i = 0;
     if (phi > steer_angle_tolerance) {
       // left turn
-      phi_i = std::atan(2 * l * std::sin(phi) /
-                        (2 * l * std::cos(phi) - w * std::sin(phi)));
+      phi_i = std::atan(2 * l * std::sin(phi) / (2 * l * std::cos(phi) - w * std::sin(phi)));
     } else if (phi < -steer_angle_tolerance) {
       // right turn
       phi = -phi;
-      phi_i = std::atan(2 * l * std::sin(phi) /
-                        (2 * l * std::cos(phi) - w * std::sin(phi)));
+      phi_i = std::atan(2 * l * std::sin(phi) / (2 * l * std::cos(phi) - w * std::sin(phi)));
       phi_i = -phi_i;
     }
     return phi_i;
   }
-  double ConvertInnerAngleToCentral(double angle)
-  {
+  double ConvertInnerAngleToCentral(double angle) {
     double phi = 0;
     double phi_i = angle;
     if (phi_i > steer_angle_tolerance) {
@@ -256,7 +229,6 @@ class HunterMessenger {
       phi = -phi;
     }
     return phi;
-
   }
 
   geometry_msgs::msg::Quaternion createQuaternionMsgFromYaw(double yaw) {
@@ -272,30 +244,15 @@ class HunterMessenger {
     double steering_angle_ = ConvertInnerAngleToCentral(msg.steering_angle);
     // double lateral_speed = 0;
 
-    asc::state_t state =
-      model_.Propagate({position_x_, position_y_, theta_},
-                       {linear_speed_, steering_angle_}, 0, dt, dt / 100);
+    asc::state_t state = model_.Propagate({position_x_, position_y_, theta_},
+                                          {linear_speed_, steering_angle_}, 0, dt, dt / 100);
     position_x_ = state[0];
     position_y_ = state[1];
     theta_ = state[2];
 
-
-    geometry_msgs::msg::Quaternion odom_quat =
-        createQuaternionMsgFromYaw(theta_);
+    geometry_msgs::msg::Quaternion odom_quat = createQuaternionMsgFromYaw(theta_);
 
     // publish tf transformation
-    // 기존 코드 (항상 TF 발행):
-    // geometry_msgs::msg::TransformStamped tf_msg;
-    // tf_msg.header.stamp = current_time_;
-    // tf_msg.header.frame_id = odom_frame_;
-    // tf_msg.child_frame_id = base_frame_;
-    // tf_msg.transform.translation.x = position_x_;
-    // tf_msg.transform.translation.y = position_y_;
-    // tf_msg.transform.translation.z = 0.0;
-    // tf_msg.transform.rotation = odom_quat;
-    // tf_broadcaster_->sendTransform(tf_msg);
-
-    // 수정된 코드 (publish_tf 파라미터로 제어):
     if (publish_tf_) {
       geometry_msgs::msg::TransformStamped tf_msg;
       tf_msg.header.stamp = current_time_;
@@ -326,44 +283,34 @@ class HunterMessenger {
     odom_msg.twist.twist.angular.z = linear_speed_ / l * std::tan(steering_angle_);
 
     odom_msg.pose.covariance = {
-    0.001,      0.0,        0.0,        0.0,        0.0,        0.0,
-    0.0,        0.001,      0.0,        0.0,        0.0,        0.0,
-    0.0,        0.0,        1000000.0,  0.0,        0.0,        0.0,
-    0.0,        0.0,        0.0,        1000000.0,  0.0,        0.0,
-    0.0,        0.0,        0.0,        0.0,        1000000.0,  0.0,
-    0.0,        0.0,        0.0,        0.0,        0.0,        1000.0};
+        0.001, 0.0, 0.0,       0.0, 0.0,       0.0, 0.0, 0.001, 0.0, 0.0,       0.0, 0.0,
+        0.0,   0.0, 1000000.0, 0.0, 0.0,       0.0, 0.0, 0.0,   0.0, 1000000.0, 0.0, 0.0,
+        0.0,   0.0, 0.0,       0.0, 1000000.0, 0.0, 0.0, 0.0,   0.0, 0.0,       0.0, 1000.0};
     odom_msg.twist.covariance = {
-    0.001,      0.0,        0.0,        0.0,        0.0,        0.0,
-    0.0,        0.001,      0.0,        0.0,        0.0,        0.0,
-    0.0,        0.0,        1000000.0,  0.0,        0.0,        0.0,
-    0.0,        0.0,        0.0,        1000000.0,  0.0,        0.0,
-    0.0,        0.0,        0.0,        0.0,        1000000.0,  0.0,
-    0.0,        0.0,        0.0,        0.0,        0.0,        1000.0};
+        0.001, 0.0, 0.0,       0.0, 0.0,       0.0, 0.0, 0.001, 0.0, 0.0,       0.0, 0.0,
+        0.0,   0.0, 1000000.0, 0.0, 0.0,       0.0, 0.0, 0.0,   0.0, 1000000.0, 0.0, 0.0,
+        0.0,   0.0, 0.0,       0.0, 1000000.0, 0.0, 0.0, 0.0,   0.0, 0.0,       0.0, 1000.0};
 
     odom_pub_->publish(odom_msg);
   }
-  double AngelVelocity2Angel(geometry_msgs::msg::Twist msg,double &radius)
-  {
+  double AngelVelocity2Angel(geometry_msgs::msg::Twist msg, double &radius) {
     double linear = fabs(msg.linear.x);
     double angular = fabs(msg.angular.z);
-    if(angular == 0)
-    {
+    if (angular == 0) {
       return 0.0;
     }
 
     radius = linear / angular;
 
     int k = msg.angular.z / fabs(msg.angular.z);
-    if ((radius-l)<0 )
-    {
-      return  k*max_steer_angle;
+    if ((radius - l) < 0) {
+      return k * max_steer_angle;
     }
 
     double phi_i;
-    phi_i = atan(l/(radius-w/2));
-    if(msg.linear.x<0)
-      phi_i *= -1.0;
-    return k*phi_i;
+    phi_i = atan(l / (radius - w / 2));
+    if (msg.linear.x < 0) phi_i *= -1.0;
+    return k * phi_i;
   }
 };
 }  // namespace westonrobot

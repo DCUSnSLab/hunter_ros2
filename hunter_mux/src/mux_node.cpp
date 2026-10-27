@@ -1,15 +1,13 @@
 #include <chrono>
-#include <memory>
-
 #include <geometry_msgs/msg/twist.hpp>
+#include <memory>
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp_components/register_node_macro.hpp>
 #include <teleop_rover_msgs/msg/cmd_mode.hpp>
 #include <teleop_rover_msgs/msg/e_stop_status.hpp>
 #include <teleop_rover_msgs/msg/mux_status.hpp>
 
-namespace hunter_mux
-{
+namespace hunter_mux {
 
 using geometry_msgs::msg::Twist;
 using teleop_rover_msgs::msg::CmdMode;
@@ -17,9 +15,8 @@ using teleop_rover_msgs::msg::EStopStatus;
 using teleop_rover_msgs::msg::MuxStatus;
 using Clock = std::chrono::steady_clock;
 
-class MuxNode : public rclcpp::Node
-{
-public:
+class MuxNode : public rclcpp::Node {
+ public:
   static constexpr int8_t MODE_IDLE = -1;
   static constexpr int8_t MODE_NAV = 1;
   static constexpr int8_t MODE_REMOTE = 2;
@@ -27,61 +24,61 @@ public:
   static constexpr int8_t SOURCE_NAV = 0;
   static constexpr int8_t SOURCE_TELEOP = 1;
 
-  explicit MuxNode(const rclcpp::NodeOptions & options)
-  : Node("mux_node", options)
-  {
+  explicit MuxNode(const rclcpp::NodeOptions& options) : Node("mux_node", options) {
     allow_remote_ = declare_parameter<bool>("remote_status", false);
-    cmd_vel_timeout_ = std::chrono::duration<double>(declare_parameter<double>("cmd_vel_timeout", 0.5));
-    teleop_timeout_ = std::chrono::duration<double>(declare_parameter<double>("teleop_timeout", 0.5));
+    cmd_vel_timeout_ =
+        std::chrono::duration<double>(declare_parameter<double>("cmd_vel_timeout", 0.5));
+    teleop_timeout_ =
+        std::chrono::duration<double>(declare_parameter<double>("teleop_timeout", 0.5));
     const double rate = declare_parameter<double>("rate", 50.0);
 
-    param_cb_ = add_on_set_parameters_callback(
-      [this](const std::vector<rclcpp::Parameter> & params) {
-        for (const auto & p : params) {
-          if (p.get_name() == "remote_status" && p.get_type() == rclcpp::ParameterType::PARAMETER_BOOL) {
-            allow_remote_ = p.as_bool();
-            RCLCPP_INFO(get_logger(), "remote_status changed to %d", allow_remote_);
+    param_cb_ =
+        add_on_set_parameters_callback([this](const std::vector<rclcpp::Parameter>& params) {
+          for (const auto& p : params) {
+            if (p.get_name() == "remote_status" &&
+                p.get_type() == rclcpp::ParameterType::PARAMETER_BOOL) {
+              allow_remote_ = p.as_bool();
+              RCLCPP_INFO(get_logger(), "remote_status changed to %d", allow_remote_);
+            }
           }
-        }
-        rcl_interfaces::msg::SetParametersResult result;
-        result.successful = true;
-        return result;
-      });
+          rcl_interfaces::msg::SetParametersResult result;
+          result.successful = true;
+          return result;
+        });
 
     final_cmd_pub_ = create_publisher<Twist>("/final_cmd", 1);
     mux_status_pub_ = create_publisher<MuxStatus>("/vehicle/mux_status", 10);
     estop_status_pub_ = create_publisher<EStopStatus>("/vehicle/estop_status", 10);
 
-    cmd_vel_sub_ = create_subscription<Twist>(
-      "/cmd_vel", 1, [this](Twist::ConstSharedPtr msg) {
-        last_nav_msg_ = *msg;
-        last_nav_time_ = Clock::now();
-        PublishIfSelected(SOURCE_NAV);
-      });
-    teleop_sub_ = create_subscription<Twist>(
-      "/remote/teleop_cmd", 1, [this](Twist::ConstSharedPtr msg) {
-        last_teleop_msg_ = *msg;
-        last_teleop_time_ = Clock::now();
-        PublishIfSelected(SOURCE_TELEOP);
-      });
-    estop_sub_ = create_subscription<EStopStatus>(
-      "/remote/estop_status", 10, [this](EStopStatus::ConstSharedPtr msg) {
-        bridge_estop_ = *msg;
-        PublishFinal(Select());
-      });
-    cmd_mode_sub_ = create_subscription<CmdMode>(
-      "/remote/cmd_mode", 10, [this](CmdMode::ConstSharedPtr msg) {
-        cmd_mode_ = msg->mode;
-        PublishFinal(Select());
-      });
+    cmd_vel_sub_ = create_subscription<Twist>("/cmd_vel", 1, [this](Twist::ConstSharedPtr msg) {
+      last_nav_msg_ = *msg;
+      last_nav_time_ = Clock::now();
+      PublishIfSelected(SOURCE_NAV);
+    });
+    teleop_sub_ =
+        create_subscription<Twist>("/remote/teleop_cmd", 1, [this](Twist::ConstSharedPtr msg) {
+          last_teleop_msg_ = *msg;
+          last_teleop_time_ = Clock::now();
+          PublishIfSelected(SOURCE_TELEOP);
+        });
+    estop_sub_ = create_subscription<EStopStatus>("/remote/estop_status", 10,
+                                                  [this](EStopStatus::ConstSharedPtr msg) {
+                                                    bridge_estop_ = *msg;
+                                                    PublishFinal(Select());
+                                                  });
+    cmd_mode_sub_ =
+        create_subscription<CmdMode>("/remote/cmd_mode", 10, [this](CmdMode::ConstSharedPtr msg) {
+          cmd_mode_ = msg->mode;
+          PublishFinal(Select());
+        });
 
     timer_ = create_wall_timer(std::chrono::duration<double>(1.0 / rate), [this]() { Tick(); });
-    RCLCPP_INFO(get_logger(), "MuxNode started: remote_status=%d, rate=%.1fHz", allow_remote_, rate);
+    RCLCPP_INFO(get_logger(), "MuxNode started: remote_status=%d, rate=%.1fHz", allow_remote_,
+                rate);
   }
 
-private:
-  struct Selection
-  {
+ private:
+  struct Selection {
     Twist cmd;
     int8_t source = SOURCE_NONE;
     bool nav_active = false;
@@ -90,8 +87,7 @@ private:
     int8_t mux_flag = 0;
   };
 
-  Selection Select() const
-  {
+  Selection Select() const {
     const auto now = Clock::now();
     Selection s;
     s.nav_active = now - last_nav_time_ < cmd_vel_timeout_;
@@ -118,23 +114,20 @@ private:
     return s;
   }
 
-  void PublishIfSelected(int8_t source)
-  {
+  void PublishIfSelected(int8_t source) {
     const Selection s = Select();
     if (s.source == source) {
       PublishFinal(s);
     }
   }
 
-  void PublishFinal(const Selection & s)
-  {
+  void PublishFinal(const Selection& s) {
     final_cmd_pub_->publish(std::make_unique<Twist>(s.cmd));
     published_since_tick_ = true;
   }
 
   // The tick keeps /final_cmd alive at `rate` and drops it to zero once inputs time out.
-  void Tick()
-  {
+  void Tick() {
     const Selection s = Select();
     if (!published_since_tick_) {
       PublishFinal(s);

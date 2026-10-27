@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-/cmd_vel 더미 퍼블리셔 — net_bridge → mux_node 파이프라인 테스트용.
+Dummy /cmd_vel publisher for testing the mux_node pipeline.
 
-실행:
+Usage:
   ros2 run hunter_ros2 fake_cmd_vel.py
   ros2 run hunter_ros2 fake_cmd_vel.py --ros-args -p pattern:=sine -p rate:=10.0
 
-파라미터:
+Parameters:
   pattern   : 'sine' | 'square' | 'zero'  (default: sine)
   rate      : Hz  (default: 10.0)
   max_speed : m/s (default: 0.3)
@@ -52,7 +52,7 @@ class FakeCmdVel(Node):
             msg.linear.x  = self._max_speed * sign
             msg.angular.z = 0.0
 
-        # pattern == 'zero' → Twist() 그대로 (0, 0)
+        # pattern == 'zero' leaves Twist() at (0, 0)
 
         self._pub.publish(msg)
         self.get_logger().debug(
