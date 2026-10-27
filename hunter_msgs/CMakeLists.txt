@@ -28,12 +28,14 @@ set(msg_file
 
 rosidl_generate_interfaces(${PROJECT_NAME}
     ${msg_file} # ${srv_file}
-  DEPENDENCIES 
+  DEPENDENCIES
     builtin_interfaces std_msgs)
 
 if(BUILD_TESTING)
-  find_package(ament_lint_auto REQUIRED)
-  ament_lint_auto_find_test_dependencies()
+  find_package(ament_cmake_lint_cmake REQUIRED)
+  find_package(ament_cmake_xmllint REQUIRED)
+  ament_lint_cmake(CMakeLists.txt)
+  ament_xmllint(package.xml)
 endif()
 
 ament_export_dependencies(rosidl_default_runtime)

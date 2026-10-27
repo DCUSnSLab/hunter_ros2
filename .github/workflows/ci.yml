@@ -1,0 +1,52 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  format:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y clang-format-18
+      - run: >
+          clang-format-18 --dry-run --Werror
+          hunter_base/src/*.cpp hunter_base/include/hunter_base/*.hpp hunter_mux/src/*.cpp
+
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        distro: [humble, jazzy]
+    runs-on: ubuntu-latest
+    container: ros:${{ matrix.distro }}
+    env:
+      AMENT_CPPCHECK_ALLOW_SLOW_VERSIONS: "1"
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: src/hunter_ros2
+      - name: Fetch dependencies
+        run: |
+          git clone --depth 1 -b scv-devel https://github.com/DCUSnSLab/ugv_sdk.git src/ugv_sdk
+          git clone --depth 1 -b jazzy https://github.com/nevlife/teleop_rover.git /tmp/teleop_rover
+          mv /tmp/teleop_rover/teleop_rover_msgs src/
+      - name: Install system dependencies
+        run: |
+          apt-get update
+          rosdep update
+          rosdep install --from-paths src --ignore-src -y
+      - name: Build
+        run: |
+          source /opt/ros/${{ matrix.distro }}/setup.bash
+          colcon build --symlink-install --packages-select ugv_sdk --cmake-args -DBUILD_TESTING=OFF
+          colcon build --symlink-install --packages-skip ugv_sdk
+      - name: Test
+        run: |
+          source /opt/ros/${{ matrix.distro }}/setup.bash
+          colcon test --packages-select hunter_msgs hunter_base hunter_mux
+          colcon test-result --verbose

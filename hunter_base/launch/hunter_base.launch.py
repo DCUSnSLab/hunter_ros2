@@ -13,7 +13,7 @@ def generate_launch_description():
                                              description='Use simulation clock if true')
 
     port_name_arg = DeclareLaunchArgument('port_name', default_value='can0',
-                                         description='CAN bus name, e.g. can0')
+                                          description='CAN bus name, e.g. can0')
     odom_frame_arg = DeclareLaunchArgument('odom_frame', default_value='odom',
                                            description='Odometry frame id')
     base_link_frame_arg = DeclareLaunchArgument('base_frame', default_value='base_link',
@@ -24,11 +24,12 @@ def generate_launch_description():
                                            description='Whether to publish TF (odom->base_link)')
 
     simulated_robot_arg = DeclareLaunchArgument('simulated_robot', default_value='false',
-                                                   description='Whether running with simulator')
+                                                description='Whether running with simulator')
     sim_control_rate_arg = DeclareLaunchArgument('control_rate', default_value='50',
                                                  description='Simulation control loop update rate')
 
-    mux_params = os.path.join(get_package_share_directory('hunter_mux'), 'config', 'mux_params.yaml')
+    mux_params = os.path.join(
+        get_package_share_directory('hunter_mux'), 'config', 'mux_params.yaml')
     use_sim_time = LaunchConfiguration('use_sim_time')
     intra = [{'use_intra_process_comms': True}]
 

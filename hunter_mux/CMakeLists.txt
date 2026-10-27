@@ -31,4 +31,13 @@ install(DIRECTORY
   DESTINATION share/${PROJECT_NAME}
 )
 
+if(BUILD_TESTING)
+  find_package(ament_cmake_cppcheck REQUIRED)
+  find_package(ament_cmake_lint_cmake REQUIRED)
+  find_package(ament_cmake_xmllint REQUIRED)
+  ament_cppcheck(src)
+  ament_lint_cmake(CMakeLists.txt)
+  ament_xmllint(package.xml)
+endif()
+
 ament_package()
