@@ -1,4 +1,4 @@
-mux_node:
+hunter_mux:
   ros__parameters:
     remote_status: false
     cmd_vel_timeout: 0.5

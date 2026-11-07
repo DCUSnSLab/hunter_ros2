@@ -15,11 +15,15 @@ find_package(rclcpp_components REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(teleop_rover_msgs REQUIRED)
 
-add_library(mux_component SHARED src/mux_node.cpp)
+add_library(mux STATIC src/mux.cpp)
+set_target_properties(mux PROPERTIES POSITION_INDEPENDENT_CODE ON)
+
+add_library(mux_component SHARED src/hunter_mux.cpp)
+target_link_libraries(mux_component mux)
 ament_target_dependencies(mux_component rclcpp rclcpp_components geometry_msgs teleop_rover_msgs)
 rclcpp_components_register_node(mux_component
   PLUGIN "hunter_mux::MuxNode"
-  EXECUTABLE mux_node)
+  EXECUTABLE hunter_mux_node)
 
 install(TARGETS mux_component
   ARCHIVE DESTINATION lib
@@ -32,6 +36,11 @@ install(DIRECTORY
 )
 
 if(BUILD_TESTING)
+  find_package(ament_cmake_gtest REQUIRED)
+  ament_add_gtest(test_mux test/test_mux.cpp)
+  target_include_directories(test_mux PRIVATE src)
+  target_link_libraries(test_mux mux)
+
   find_package(ament_cmake_cppcheck REQUIRED)
   find_package(ament_cmake_lint_cmake REQUIRED)
   find_package(ament_cmake_xmllint REQUIRED)

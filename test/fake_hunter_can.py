@@ -10,6 +10,7 @@ Usage:
   python3 test/fake_hunter_can.py [iface=vcan0] [duration_s=60]
   ros2 launch bring_up hunter_start.launch.py port_name:=vcan0
 """
+
 import socket
 import struct
 import sys
@@ -48,5 +49,7 @@ while time.monotonic() < end:
         send(0x221, struct.pack('>hhhh', linear_mm, 0, 0, steer_mrad))
         next_tx += 0.02
     time.sleep(0.001)
-print('fake hunter: %d motion commands received, last linear %d mm/s steer %d mrad'
-      % (n_cmd, linear_mm, steer_mrad))
+print(
+    'fake hunter: %d motion commands received, last linear %d mm/s steer %d mrad'
+    % (n_cmd, linear_mm, steer_mrad)
+)

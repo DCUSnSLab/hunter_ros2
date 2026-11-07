@@ -29,7 +29,7 @@ def generate_launch_description():
                                                  description='Simulation control loop update rate')
 
     mux_params = os.path.join(
-        get_package_share_directory('hunter_mux'), 'config', 'mux_params.yaml')
+        get_package_share_directory('hunter_mux'), 'config', 'hunter_mux.param.yaml')
     use_sim_time = LaunchConfiguration('use_sim_time')
     intra = [{'use_intra_process_comms': True}]
 
@@ -61,8 +61,17 @@ def generate_launch_description():
             ComposableNode(
                 package='hunter_mux',
                 plugin='hunter_mux::MuxNode',
-                name='mux_node',
+                name='hunter_mux',
                 parameters=[mux_params, {'use_sim_time': use_sim_time}],
+                remappings=[
+                    ('~/input/cmd_vel', '/cmd_vel'),
+                    ('~/input/teleop_cmd', '/remote/teleop_cmd'),
+                    ('~/input/estop_status', '/remote/estop_status'),
+                    ('~/input/cmd_mode', '/remote/cmd_mode'),
+                    ('~/output/final_cmd', '/final_cmd'),
+                    ('~/output/mux_status', '/vehicle/mux_status'),
+                    ('~/output/estop_status', '/vehicle/estop_status'),
+                ],
                 extra_arguments=intra,
             ),
         ],
