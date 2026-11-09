@@ -3,9 +3,9 @@
 #include <memory>
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp_components/register_node_macro.hpp>
-#include <teleop_rover_msgs/msg/cmd_mode.hpp>
-#include <teleop_rover_msgs/msg/e_stop_status.hpp>
-#include <teleop_rover_msgs/msg/mux_status.hpp>
+#include <hunter_mux_msgs/msg/cmd_mode.hpp>
+#include <hunter_mux_msgs/msg/e_stop_status.hpp>
+#include <hunter_mux_msgs/msg/mux_status.hpp>
 #include <utility>
 #include <vector>
 
@@ -14,9 +14,9 @@
 namespace hunter_mux {
 
 using geometry_msgs::msg::Twist;
-using teleop_rover_msgs::msg::CmdMode;
-using teleop_rover_msgs::msg::EStopStatus;
-using teleop_rover_msgs::msg::MuxStatus;
+using hunter_mux_msgs::msg::CmdMode;
+using hunter_mux_msgs::msg::EStopStatus;
+using hunter_mux_msgs::msg::MuxStatus;
 
 class MuxNode : public rclcpp::Node {
  public:

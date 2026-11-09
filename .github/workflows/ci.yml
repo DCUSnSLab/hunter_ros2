@@ -33,8 +33,6 @@ jobs:
       - name: Fetch dependencies
         run: |
           git clone --depth 1 -b scv-devel https://github.com/DCUSnSLab/ugv_sdk.git src/ugv_sdk
-          git clone --depth 1 -b jazzy https://github.com/nevlife/teleop_rover.git /tmp/teleop_rover
-          mv /tmp/teleop_rover/teleop_rover_msgs src/
       - name: Install system dependencies
         run: |
           apt-get update
@@ -48,5 +46,5 @@ jobs:
       - name: Test
         run: |
           source /opt/ros/${{ matrix.distro }}/setup.bash
-          colcon test --packages-select hunter_msgs hunter_base hunter_mux
+          colcon test --packages-select hunter_msgs hunter_base hunter_mux hunter_mux_msgs
           colcon test-result --verbose

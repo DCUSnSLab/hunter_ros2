@@ -12,7 +12,7 @@
   <depend>geometry_msgs</depend>
   <depend>rclcpp</depend>
   <depend>rclcpp_components</depend>
-  <depend>teleop_rover_msgs</depend>
+  <depend>hunter_mux_msgs</depend>
 
   <test_depend>ament_cmake_cppcheck</test_depend>
   <test_depend>ament_cmake_gtest</test_depend>

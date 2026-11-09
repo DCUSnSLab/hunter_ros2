@@ -5,6 +5,7 @@
 * hunter_base: a ROS wrapper around Hunter SDK to monitor and control the robot
 * hunter_msgs: hunter related message definitions
 * hunter_mux: command multiplexer that routes navigation or remote teleop commands to the vehicle with safety E-stop logic
+* hunter_mux_msgs: mode, e-stop and status messages of hunter_mux
 
 
 ## Communication interface setup
