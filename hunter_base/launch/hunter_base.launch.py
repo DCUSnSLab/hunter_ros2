@@ -6,6 +6,7 @@ from launch.actions import DeclareLaunchArgument
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import ComposableNodeContainer, Node
 from launch_ros.descriptions import ComposableNode
+from launch_ros.parameter_descriptions import ParameterValue
 
 
 def generate_launch_description():
@@ -27,6 +28,9 @@ def generate_launch_description():
                                                 description='Whether running with simulator')
     sim_control_rate_arg = DeclareLaunchArgument('control_rate', default_value='50',
                                                  description='Simulation control loop update rate')
+
+    remote_status_arg = DeclareLaunchArgument('remote_status', default_value='false',
+                                              description='Whether hunter_mux may select teleop')
 
     mux_params = os.path.join(
         get_package_share_directory('hunter_mux'), 'config', 'hunter_mux.param.yaml')
@@ -62,11 +66,17 @@ def generate_launch_description():
                 package='hunter_mux',
                 plugin='hunter_mux::MuxNode',
                 name='hunter_mux',
-                parameters=[mux_params, {'use_sim_time': use_sim_time}],
+                parameters=[mux_params, {
+                    'use_sim_time': use_sim_time,
+                    'remote_status': ParameterValue(LaunchConfiguration('remote_status'),
+                                                    value_type=bool),
+                }],
                 remappings=[
                     ('~/input/cmd_vel', '/cmd_vel'),
                     ('~/input/teleop_cmd', '/remote/teleop_cmd'),
                     ('~/input/estop_status', '/remote/estop_status'),
+                    ('~/input/estop', '/remote/estop'),
+                    ('~/input/estop_reset', '/remote/estop_reset'),
                     ('~/input/cmd_mode', '/remote/cmd_mode'),
                     ('~/output/final_cmd', '/final_cmd'),
                     ('~/output/mux_status', '/vehicle/mux_status'),
@@ -98,6 +108,7 @@ def generate_launch_description():
         publish_tf_arg,
         simulated_robot_arg,
         sim_control_rate_arg,
+        remote_status_arg,
         vehicle_container,
         velocity_extractor_node,
         hunter_state_parser_node
