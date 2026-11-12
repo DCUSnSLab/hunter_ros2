@@ -8,6 +8,17 @@
 * hunter_mux_msgs: mode, e-stop and status messages of hunter_mux
 
 
+## hunter_mux
+
+hunter_mux publishes `/final_cmd` from navigation (`~/input/cmd_vel`) or remote teleop
+(`~/input/teleop_cmd`), chosen by `~/input/cmd_mode` (1 navigation, 2 remote; remote only when
+`remote_status` is true, set with `remote_status:=true` on `hunter_base.launch.py`).
+
+An e-stop stays latched until a reset, whatever caused it: a request on `~/input/estop`, the bridge
+flag on `~/input/estop_status`, or remote mode with navigation running and no teleop command. An
+empty message on `~/input/estop_reset` releases it only once no cause is still active. The state is
+on `~/output/estop_status`.
+
 ## Communication interface setup
 
 Please refer to the [README](https://github.com/westonrobot/ugv_sdk) of "ugv_sdk" package for setup of communication interfaces.

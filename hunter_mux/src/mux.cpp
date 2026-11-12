@@ -6,7 +6,12 @@ Mux::Mux(std::chrono::duration<double> cmd_vel_timeout,
          std::chrono::duration<double> teleop_timeout)
     : cmd_vel_timeout_(cmd_vel_timeout), teleop_timeout_(teleop_timeout) {}
 
-Selection Mux::select(Clock::time_point now) const {
+void Mux::reset_estop(Clock::time_point now) {
+  latched_ = false;
+  select(now);
+}
+
+Selection Mux::select(Clock::time_point now) {
   Selection s;
   s.nav_active = now - last_nav_time_ < cmd_vel_timeout_;
   s.teleop_active = now - last_teleop_time_ < teleop_timeout_;
@@ -15,7 +20,8 @@ Selection Mux::select(Clock::time_point now) const {
   if (allow_remote_ && remote_mode_requested && s.nav_active && !s.teleop_active) {
     s.mux_flag = mux_flag_remote_without_teleop;
   }
-  s.is_estop = bridge_estop_ || s.mux_flag != 0;
+  latched_ = latched_ || bridge_estop_ || s.mux_flag != 0;
+  s.is_estop = latched_;
 
   if (s.is_estop) {
     return s;

@@ -85,3 +85,45 @@ TEST(Mux, BridgeEstopBlocksEverySource) {
   EXPECT_EQ(s.mux_flag, 0);
   EXPECT_EQ(s.source, hunter_mux::source_none);
 }
+
+TEST(Mux, EstopStaysLatchedAfterItsCauseClears) {
+  Mux mux = make_mux(false, hunter_mux::mode_nav);
+  mux.on_nav(t0);
+  mux.set_bridge_estop(true);
+  EXPECT_TRUE(mux.select(t0).is_estop);
+  mux.set_bridge_estop(false);
+  const Selection s = mux.select(t0);
+  EXPECT_TRUE(s.is_estop);
+  EXPECT_EQ(s.source, hunter_mux::source_none);
+}
+
+TEST(Mux, ResetReleasesTheLatchOnceTheCauseIsGone) {
+  Mux mux = make_mux(false, hunter_mux::mode_nav);
+  mux.on_nav(t0);
+  mux.set_bridge_estop(true);
+  mux.select(t0);
+  mux.reset_estop(t0);
+  EXPECT_TRUE(mux.select(t0).is_estop);
+  mux.set_bridge_estop(false);
+  mux.reset_estop(t0);
+  const Selection s = mux.select(t0);
+  EXPECT_FALSE(s.is_estop);
+  EXPECT_EQ(s.source, hunter_mux::source_nav);
+}
+
+TEST(Mux, RequestedEstopLatchesUntilReset) {
+  Mux mux = make_mux(true, hunter_mux::mode_remote);
+  mux.on_teleop(t0);
+  mux.request_estop();
+  EXPECT_TRUE(mux.select(t0).is_estop);
+  mux.reset_estop(t0);
+  EXPECT_EQ(mux.select(t0).source, hunter_mux::source_teleop);
+}
+
+TEST(Mux, RemoteWithoutTeleopStaysLatchedWhenTeleopResumes) {
+  Mux mux = make_mux(true, hunter_mux::mode_remote);
+  mux.on_nav(t0);
+  EXPECT_TRUE(mux.select(t0).is_estop);
+  mux.on_teleop(t0);
+  EXPECT_TRUE(mux.select(t0).is_estop);
+}

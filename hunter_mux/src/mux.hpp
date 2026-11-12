@@ -33,16 +33,22 @@ class Mux {
   void set_bridge_estop(bool is_estop) { bridge_estop_ = is_estop; }
   void set_cmd_mode(int8_t mode) { cmd_mode_ = mode; }
   void set_allow_remote(bool allow) { allow_remote_ = allow; }
+  void request_estop() { latched_ = true; }
+  // Releases the latch only once no cause is active; with a cause still active it stays set.
+  void reset_estop(Clock::time_point now);
   int8_t cmd_mode() const { return cmd_mode_; }
   bool allow_remote() const { return allow_remote_; }
 
-  Selection select(Clock::time_point now) const;
+  // An e-stop, from any cause, stays latched until reset_estop: a cause that clears by itself
+  // (a bridge flag dropping, teleop resuming) does not move the vehicle again.
+  Selection select(Clock::time_point now);
 
  private:
   std::chrono::duration<double> cmd_vel_timeout_;
   std::chrono::duration<double> teleop_timeout_;
   bool allow_remote_ = false;
   bool bridge_estop_ = false;
+  bool latched_ = false;
   int8_t cmd_mode_ = mode_idle;
   Clock::time_point last_nav_time_{};
   Clock::time_point last_teleop_time_{};

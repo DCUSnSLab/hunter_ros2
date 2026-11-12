@@ -1,11 +1,12 @@
 #include <chrono>
 #include <geometry_msgs/msg/twist.hpp>
-#include <memory>
-#include <rclcpp/rclcpp.hpp>
-#include <rclcpp_components/register_node_macro.hpp>
 #include <hunter_mux_msgs/msg/cmd_mode.hpp>
 #include <hunter_mux_msgs/msg/e_stop_status.hpp>
 #include <hunter_mux_msgs/msg/mux_status.hpp>
+#include <memory>
+#include <rclcpp/rclcpp.hpp>
+#include <rclcpp_components/register_node_macro.hpp>
+#include <std_msgs/msg/empty.hpp>
 #include <utility>
 #include <vector>
 
@@ -17,6 +18,7 @@ using geometry_msgs::msg::Twist;
 using hunter_mux_msgs::msg::CmdMode;
 using hunter_mux_msgs::msg::EStopStatus;
 using hunter_mux_msgs::msg::MuxStatus;
+using std_msgs::msg::Empty;
 
 class MuxNode : public rclcpp::Node {
  public:
@@ -62,6 +64,20 @@ class MuxNode : public rclcpp::Node {
                                                     mux_.set_bridge_estop(msg->is_estop);
                                                     publish_final(mux_.select(Clock::now()));
                                                   });
+    estop_request_sub_ =
+        create_subscription<Empty>("~/input/estop", 10, [this](Empty::ConstSharedPtr) {
+          mux_.request_estop();
+          RCLCPP_WARN(get_logger(), "e-stop requested");
+          publish_final(mux_.select(Clock::now()));
+        });
+    estop_reset_sub_ =
+        create_subscription<Empty>("~/input/estop_reset", 10, [this](Empty::ConstSharedPtr) {
+          mux_.reset_estop(Clock::now());
+          const Selection s = mux_.select(Clock::now());
+          RCLCPP_INFO(get_logger(), "e-stop reset: %s",
+                      s.is_estop ? "a cause is still active" : "released");
+          publish_final(s);
+        });
     cmd_mode_sub_ =
         create_subscription<CmdMode>("~/input/cmd_mode", 10, [this](CmdMode::ConstSharedPtr msg) {
           mux_.set_cmd_mode(msg->mode);
@@ -129,6 +145,8 @@ class MuxNode : public rclcpp::Node {
   rclcpp::Subscription<Twist>::SharedPtr cmd_vel_sub_;
   rclcpp::Subscription<Twist>::SharedPtr teleop_sub_;
   rclcpp::Subscription<EStopStatus>::SharedPtr estop_sub_;
+  rclcpp::Subscription<Empty>::SharedPtr estop_request_sub_;
+  rclcpp::Subscription<Empty>::SharedPtr estop_reset_sub_;
   rclcpp::Subscription<CmdMode>::SharedPtr cmd_mode_sub_;
   rclcpp::TimerBase::SharedPtr timer_;
 };
